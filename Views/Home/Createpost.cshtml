@@ -1,0 +1,486 @@
+﻿@{
+    ViewData["Title"] = "Create Post";
+}
+
+<div class="create-post-page">
+    <div class="create-post-container">
+        <!-- Upload Media Section -->
+        <div class="upload-section">
+            <div class="upload-container" id="upload-container">
+                <!-- Carousel for uploaded images -->
+                <div class="carousel-container" id="carousel-container">
+                    <div class="carousel-inner" id="carousel-inner">
+                        <!-- Images will be added here dynamically -->
+                    </div>
+                    <button class="carousel-control prev" id="prev-btn" disabled>&lt;</button>
+                    <button class="carousel-control next" id="next-btn" disabled>&gt;</button>
+                </div>
+
+                <!-- Upload button that remains visible -->
+                <div class="upload-button-container">
+                    <div class="upload-button" id="upload-button">
+                        
+                        <p class="upload-text">Upload media <span id="upload-count">(0/5)</span></p>
+                        <input type="file" id="media-upload" accept="image/*" multiple class="hidden" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Post Form -->
+        <form class="post-form" id="post-form">
+            <div class="form-group">
+                <textarea id="caption" name="caption" placeholder="Caption" class="form-input caption-input" rows="6"></textarea>
+            </div>
+            <div class="form-group">
+                <input type="text" id="location" name="location" placeholder="Location" class="form-input" />
+            </div>
+            <div class="form-group">
+                <button type="submit" class="post-btn" id="post-btn" disabled>Post</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="message-modal" class="modal hidden">
+    <div class="modal-content">
+        <span id="modal-close" class="modal-close">&times;</span>
+        <p id="modal-message"></p>
+    </div>
+</div>
+
+<style>
+    * {
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .right-navbar {
+        display: none;
+    }
+
+    .main-content {
+        margin-right: 0;
+        background-color: white;
+    }
+
+    .create-post-page {
+        max-width: 935px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+
+    .create-post-container {
+        max-width: 500px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .upload-section {
+        width: 100%;
+        margin-bottom: 30px;
+    }
+
+    .upload-container {
+        width: 100%;
+        border: 1px solid #dbdbdb;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .upload-button-container {
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .upload-button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 15px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+
+        .upload-button:hover {
+            background-color: #f0f0f0;
+        }
+
+    .upload-icon {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 10px;
+    }
+
+    .upload-text {
+        font-size: 16px;
+        color: #2F4F4F;
+        margin: 0;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .carousel-container {
+        width: 100%;
+        height: 300px;
+        position: relative;
+        display: none;
+    }
+
+        .carousel-container.active {
+            display: block;
+        }
+
+    .carousel-inner {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        transition: transform 0.3s ease;
+    }
+
+    .carousel-item {
+        min-width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .carousel-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .remove-image {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .carousel-control {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border: 1px solid #dbdbdb;
+        border-radius: 50%;
+        font-size: 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .carousel-control:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+    .prev {
+        left: 10px;
+    }
+
+    .next {
+        right: 10px;
+    }
+
+    .post-form {
+        width: 100%;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+        width: 100%;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #dbdbdb;
+        border-radius: 4px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+
+    .caption-input {
+        resize: none;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #2F4F4F;
+    }
+
+    .post-btn {
+        width: 100%;
+        padding: 10px;
+        background-color: #2F4F4F;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+        .post-btn:hover:not(:disabled) {
+            background-color: #1e3030;
+        }
+
+        .post-btn:disabled {
+            background-color: #b2c2c2;
+            cursor: not-allowed;
+        }
+
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+
+        .modal.hidden {
+            display: none;
+        }
+
+    .modal-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 400px;
+        text-align: center;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 15px;
+        right: 25px;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+</style>
+
+<script>
+        function showModal(message) {
+        const modal = document.getElementById('message-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalClose = document.getElementById('modal-close');
+
+        modalMessage.textContent = message;
+        modal.classList.remove('hidden');
+
+        modalClose.onclick = function () {
+            modal.classList.add('hidden');
+        };
+
+        window.onclick = function (event) {
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+            }
+        };
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        const uploadButton = document.getElementById('upload-button');
+        const fileInput = document.getElementById('media-upload');
+        const uploadCount = document.getElementById('upload-count');
+        const carouselContainer = document.getElementById('carousel-container');
+        const carouselInner = document.getElementById('carousel-inner');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const postBtn = document.getElementById('post-btn');
+        const postForm = document.getElementById('post-form');
+
+        let uploadedImages = [];
+        let currentIndex = 0;
+        const maxImages = 5;
+
+        uploadButton.addEventListener('click', function() {
+            // Check if we've reached the maximum number of images
+            if (uploadedImages.length >= maxImages) {
+                showModal(`You can only upload up to ${maxImages} images. Please remove some images before adding more.`);
+                return;
+            }
+
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', handleFileSelect);
+        prevBtn.addEventListener('click', showPreviousImage);
+        nextBtn.addEventListener('click', showNextImage);
+
+        postForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (uploadedImages.length === 0) {
+                showModal('Please upload at least one image.');
+                return;
+            }
+
+            showModal('Post created successfully!');
+
+            resetForm();
+        });
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+
+            if (files.length > 0) {
+                const remainingSlots = maxImages - uploadedImages.length;
+                const filesToProcess = Math.min(remainingSlots, files.length);
+
+                if (filesToProcess < files.length) {
+                    showModal(`You can only add ${remainingSlots} more image(s). Only the first ${filesToProcess} image(s) will be added.`);
+                }
+
+                for (let i = 0; i < filesToProcess; i++) {
+                    const file = files[i];
+
+                    if (!file.type.match('image.*')) {
+                        showModal('Please upload only image files.');
+                        continue;
+                    }
+
+                    const reader = new FileReader();
+
+                    reader.onload = function(e) {
+                        uploadedImages.push(e.target.result);
+
+                        updateCarousel();
+                    };
+
+                    reader.readAsDataURL(file);
+                }
+
+                fileInput.value = '';
+            }
+        }
+
+        function updateCarousel() {
+            // Update count
+            uploadCount.textContent = `(${uploadedImages.length}/${maxImages})`;
+
+            // Enable/disable post button
+            postBtn.disabled = uploadedImages.length === 0;
+
+            if (uploadedImages.length > 0) {
+                // Show carousel
+                carouselContainer.classList.add('active');
+
+                // Clear carousel
+                carouselInner.innerHTML = '';
+
+                // Add images to carousel
+                uploadedImages.forEach((src, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'carousel-item';
+
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.className = 'carousel-image';
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-image';
+                    removeBtn.innerHTML = '&times;';
+                    removeBtn.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent event bubbling
+                        removeImage(index);
+                    });
+
+                    item.appendChild(img);
+                    item.appendChild(removeBtn);
+                    carouselInner.appendChild(item);
+                });
+
+                // Show first image
+                showImage(0);
+
+                // Update navigation buttons
+                updateNavButtons();
+            } else {
+                // Hide carousel
+                carouselContainer.classList.remove('active');
+            }
+        }
+
+        function showImage(index) {
+            if (uploadedImages.length === 0) return;
+
+            currentIndex = index;
+            carouselInner.style.transform = `translateX(-${currentIndex * 100}%)`;
+            updateNavButtons();
+        }
+
+        function showPreviousImage() {
+            if (currentIndex > 0) {
+                showImage(currentIndex - 1);
+            }
+        }
+
+        function showNextImage() {
+            if (currentIndex < uploadedImages.length - 1) {
+                showImage(currentIndex + 1);
+            }
+        }
+
+        function updateNavButtons() {
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === uploadedImages.length - 1;
+        }
+
+        function removeImage(index) {
+            // Remove image from array
+            uploadedImages.splice(index, 1);
+
+            // Update carousel
+            updateCarousel();
+
+            // Adjust current index if needed
+            if (currentIndex >= uploadedImages.length) {
+                currentIndex = Math.max(0, uploadedImages.length - 1);
+                showImage(currentIndex);
+            }
+        }
+
+        function resetForm() {
+            // Clear uploaded images
+            uploadedImages = [];
+            currentIndex = 0;
+
+            // Reset form fields
+            postForm.reset();
+
+            // Update UI
+            updateCarousel();
+        }
+    });
+</script>

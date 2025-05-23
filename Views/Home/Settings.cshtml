@@ -1,0 +1,236 @@
+﻿@model Solivio.Models.User
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+
+@{
+    var username = HttpContextAccessor.HttpContext.Session.GetString("Username");
+}
+
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="settings-page">
+    <div class="settings-container">
+        <!-- Account Information Form -->
+        <form class="settings-form" id="account-info-form" asp-action="Settings" method="post" enctype="multipart/form-data">
+            <div class="profile-picture-section">
+                <div class="profile-picture-container">
+<img id="profile-preview" 
+     src="@Url.Action("GetProfileImage", "Home")?t=@DateTime.Now.Ticks" 
+     alt="Profile" 
+     class="profile-picture" />
+                </div>
+                <button type="button" class="change-picture-btn" onclick="document.getElementById('profile-picture-upload').click()">Change picture</button>
+                <input type="file" name="profileImage" id="profile-picture-upload" accept="image/*" class="hidden" onchange="previewImage(this)" />
+            </div>
+            <input type="hidden" name="formType" value="account" />
+            <div class="form-group">
+                <input type="text" id="username" name="username" placeholder="Username" class="form-input" value="@Model.Username" required />
+            </div>
+            <div class="form-group">
+                <input type="email" id="email" name="email" placeholder="Email" class="form-input" value="@Model.Email" required />
+            </div>
+            <div class="form-group">
+                <button type="submit" class="save-btn">Save</button>
+            </div>
+        </form>
+
+        <!-- Password Change Form -->
+        <div class="password-section">
+            <h3 class="password-heading">Choose a new password</h3>
+
+            <form class="settings-form" id="password-form" asp-action="Settings" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="formType" value="password" />
+                <div class="form-group">
+                    <input type="password" id="current-password" name="currentPassword" placeholder="Current password" class="form-input" required />
+                </div>
+                <div class="form-group">
+                    <input type="password" id="new-password" name="newPassword" placeholder="New password" class="form-input" required />
+                </div>
+                <div class="form-group">
+                    <input type="password" id="confirm-password" name="confirmPassword" placeholder="Confirm password" class="form-input" required />
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="reset-password-btn">Reset password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="popup-message"
+     style="display: none;
+            position: fixed;
+            top: 20px;
+            left: 60%;
+            transform: translateX(-50%);
+            background-color: white;
+            color: black;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            font-size: 14px;">
+</div>
+
+<script>
+    //preview picture
+    document.getElementById('profile-picture-upload').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                document.getElementById('profile-preview').src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+
+    //pop up
+    window.onload = function() {
+        var popup = document.getElementById('popup-message');
+
+        @* Account success *@
+        @if (TempData["AccountSuccess"] != null)
+        {
+                <text>
+                popup.innerText = '@TempData["AccountSuccess"]';
+                popup.style.display = 'block';
+                setTimeout(() => { popup.style.display = 'none'; }, 4000);
+                </text>
+        }
+        @* Password success *@
+        else if (TempData["PasswordSuccess"] != null)
+        {
+                <text>
+                popup.innerText = '@TempData["PasswordSuccess"]';
+                popup.style.display = 'block';
+                setTimeout(() => { popup.style.display = 'none'; }, 4000);
+                </text>
+        }
+    };
+</script>
+
+<style>
+    .main-content {
+        background: white;
+    }
+    /* Hide right navbar on settings page */
+    .right-navbar {
+        display: none;
+    }
+
+    /* Adjust main content to take full width minus left navbar */
+    .main-content {
+        margin-right: 0;
+    }
+
+    /* Settings Page Styles */
+    .settings-page {
+        max-width: 935px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+
+    .settings-container {
+        max-width: 500px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* Profile Picture Section */
+    .profile-picture-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 40px;
+        width: 100%;
+    }
+
+    .profile-picture-container {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 15px;
+    }
+
+    .profile-picture {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .change-picture-btn {
+        background: none;
+        border: none;
+        color: #2F4F4F;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 5px;
+    }
+
+        .change-picture-btn:hover {
+            text-decoration: underline;
+        }
+
+    .hidden {
+        display: none;
+    }
+
+    /* Form Styles */
+    .settings-form {
+        width: 100%;
+        margin-bottom: 40px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+        width: 100%;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #dbdbdb;
+        border-radius: 4px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2F4F4F;
+        }
+
+    .save-btn, .reset-password-btn {
+        width: 100%;
+        padding: 10px;
+        background-color: #2F4F4F;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+        .save-btn:hover, .reset-password-btn:hover {
+            background-color: #3d6666;
+        }
+
+    /* Password Section */
+    .password-section {
+        width: 100%;
+    }
+
+    .password-heading {
+        font-size: 16px;
+        font-weight: 500;
+        color: black;
+        margin-bottom: 15px;
+    }
+</style>

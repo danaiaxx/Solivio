@@ -1,0 +1,267 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+
+@{
+    var username = HttpContextAccessor.HttpContext.Session.GetString("Username");
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Solivio</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fafafa;
+        }
+
+        /* Left Navbar Styles */
+        .left-navbar {
+            width: 275px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid #dbdbdb;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            z-index: 10;
+        }
+
+        .logo-container {
+            padding: 10px 20px 20px 20px;
+        }
+
+        .logo {
+            max-width: 120px;
+            height: auto;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            text-decoration: none;
+            color: #262626;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+            .nav-item:hover {
+                background-color: #f8f8f8;
+            }
+
+            .nav-item.active {
+                background-color: #DBF2F2;
+                font-weight: 600; /* makes text bold */
+            }
+
+                .nav-item.active span {
+                    color: #2F4F4F;
+                }
+
+            .nav-item span {
+                color: black;
+            }
+
+        .nav-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 15px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            border-top: 1px solid #f1f1f1;
+            margin-top: 8px;
+        }
+
+        .profile-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 12px;
+        }
+
+        .username {
+            flex-grow: 1;
+            font-size: 14px;
+            font-weight: 500;
+            color: #262626;
+        }
+
+        .logout-icon {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* Main Content Container */
+        .main-content {
+            margin-left: 275px;
+            margin-right: 300px; /* Make space for right navbar */
+            padding: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Right Navbar Styles */
+        .right-navbar {
+            width: 300px;
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            padding: 30px 20px;
+            border-left: 1px solid #dbdbdb;
+            background-color: white;
+            z-index: 10;
+            box-sizing: border-box;
+        }
+
+        .profile-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .profile-picture {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 15px;
+        }
+
+        .profile-username {
+            font-size: 18px;
+            font-weight: 500;
+            margin: 0;
+            color: #262626;
+        }
+
+        .profile-stats {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+            padding: 15px 0;
+            border-top: 1px solid #f1f1f1;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            font-size: 16px;
+            color: black;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #898F99;
+        }
+
+        .profile-button {
+            display: block;
+            padding: 10px;
+            background-color: #2F4F4F;
+            color: white;
+            text-align: center;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+            .profile-button:hover {
+                background-color: #3d6666;
+            }
+    </style>
+</head>
+<body>
+    <div class="left-navbar">
+        <div class="logo-container">
+            <img src="~/images/Solivio.png" alt="Solivio" class="logo" />
+        </div>
+
+        <div class="nav-items">
+            <a href="/Home/Createpost" class="nav-item" data-page="create">
+                <img src="~/images/create-icon.png" alt="Create" class="nav-icon" />
+                <span>Create</span>
+            </a>
+            <a href="/Home/Feed" class="nav-item" data-page="home">
+                <img src="~/images/home-icon.png" alt="Home" class="nav-icon" />
+                <span>Home</span>
+            </a>
+            <a href="/Home/Profile" class="nav-item" data-page="profile">
+                <img src="~/images/profile-icon.png" alt="Profile" class="nav-icon" />
+                <span>Profile</span>
+            </a>
+            <a href="/Home/Settings" class="nav-item" data-page="settings">
+                <img src="~/images/settings-icon.png" alt="Settings" class="nav-icon" />
+                <span>Settings</span>
+            </a>
+        </div>
+
+        <div class="user-profile">
+            <img src="@Url.Action("GetProfileImage", "Home")?t=@DateTime.Now.Ticks" alt="Profile" class="profile-img" />
+            <span class="username">@username</span>
+            <a href="/Home/Logout" class="nav-item">
+                <img src="~/images/logout-icon.png" alt="Logout" class="logout-icon" />
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Navbar Profile Section -->
+    <div class="right-navbar">
+        <div class="profile-header">
+            <img src="@Url.Action("GetProfileImage", "Home")?t=@DateTime.Now.Ticks" alt="Profile" class="profile-picture" />
+            <h2 class="profile-username">@username</h2>
+        </div>
+
+        <div class="profile-stats">
+            <div class="stat-item">
+                <span class="stat-value">3</span>
+                <span class="stat-label">Posts</span>
+            </div>
+        </div>
+
+        <a href="/Home/Profile" class="profile-button">See your profile</a>
+    </div>
+
+    <div class="main-content">
+        @RenderBody()
+    </div>
+    <script>
+            document.addEventListener('DOMContentLoaded', function () {
+            const currentPath = window.location.pathname.toLowerCase();
+
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                const itemPath = item.getAttribute('href').toLowerCase();
+
+                if (itemPath === currentPath) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

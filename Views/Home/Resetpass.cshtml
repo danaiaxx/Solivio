@@ -1,0 +1,159 @@
+﻿@{
+    Layout = null;
+}
+
+<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+<title>Solivio - Reset Password</title>
+
+<style>
+    :root {
+        --primary-color: #2F4F4F;
+        --white: #ffffff;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: var(--white);
+        padding: 1rem;
+    }
+
+    .resetpass-container {
+        width: 100%;
+        max-width: 450px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .icon-container {
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+
+    .password-icon {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 1rem;
+    }
+
+    .title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .description {
+        text-align: center;
+        color: black;
+        font-size: 1rem;
+        line-height: 1.5;
+        margin-bottom: 2rem;
+        max-width: 350px;
+    }
+
+    .resetpass-form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .form-input {
+        padding: 0.8rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+        outline: none;
+        transition: border-color 0.3s;
+        width: 100%;
+    }
+
+        .form-input:focus {
+            border-color: var(--primary-color);
+        }
+
+    .reset-button {
+        background-color: var(--primary-color);
+        color: var(--white);
+        border: none;
+        border-radius: 4px;
+        padding: 0.8rem;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        width: 100%;
+    }
+
+        .reset-button:hover {
+            background-color: #3d6666;
+        }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 2rem 0;
+        width: 100%;
+        color: #666;
+    }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+
+    .divider-text {
+        padding: 0 1rem;
+        font-size: 0.9rem;
+    }
+
+    .go-back {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+        .go-back:hover {
+            text-decoration: underline;
+        }
+</style>
+<body>
+    <div class="resetpass-container">
+        <div class="icon-container">
+            <img src="~/images/password-icon.png" alt="Password Icon" class="password-icon" />
+            <h1 class="title">Choose a new password</h1>
+            <p class="description">
+                Password must be strong and unique.
+            </p>
+        </div>
+
+        <form class="resetpass-form" method="post" asp-action="Resetpass" asp-controller="Home">
+            <!-- Hidden fields to store data from previous steps -->
+            <input type="hidden" id="emailOrUsername" name="emailOrUsername" value="@ViewData["EmailOrUsername"]" />
+
+            <input type="password" class="form-input" id="newPassword" name="newPassword" placeholder="New password" required />
+            <input type="password" class="form-input" id="confirmPassword" name="confirmPassword" placeholder="Confirm password" required />
+
+            <button type="submit" class="reset-button">Reset password</button>
+        </form>
+
+        <div class="divider">
+            <span class="divider-text">OR</span>
+        </div>
+
+        <a href="/Home/Login" class="go-back">Go back</a>
+    </div>
+</body>

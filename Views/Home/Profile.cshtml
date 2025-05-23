@@ -1,0 +1,206 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+
+@{
+    var username = HttpContextAccessor.HttpContext.Session.GetString("Username");
+}
+
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<div class="profile-page">
+    <!-- Profile Header Section -->
+    <div class="profile-header">
+        <div class="profile-info">
+            <div class="profile-image-container">
+                <img src="@Url.Action("GetProfileImage", "Home")?t=@DateTime.Now.Ticks" alt="Profile" class="profile-image" />
+            </div>
+            <div class="profile-details">
+                <div class="profile-name-actions">
+                    <h1 class="profile-name">@username</h1>
+                    <a href="/Home/Settings" class="edit-profile-btn">Edit profile</a>
+                </div>
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">3</span>
+                        <span class="stat-label">Posts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="profile-divider" />
+
+    <!-- Profile Posts Grid -->
+    <div class="posts-grid">
+        <div class="post-item">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/56/White_shark.jpg" alt="Post" class="post-thumbnail" />
+        </div>
+        <div class="post-item">
+            <img src="https://source.unsplash.com/random/300x300/?travel,paris" alt="Post" class="post-thumbnail" />
+        </div>
+        <div class="post-item">
+            <img src="https://source.unsplash.com/random/300x300/?travel,tokyo" alt="Post" class="post-thumbnail" />
+        </div>
+        <div class="post-item">
+            <img src="https://source.unsplash.com/random/300x300/?travel,newyork" alt="Post" class="post-thumbnail" />
+        </div>
+        <div class="post-item">
+            <img src="https://source.unsplash.com/random/300x300/?travel,rome" alt="Post" class="post-thumbnail" />
+        </div>
+        <div class="post-item">
+            <img src="https://source.unsplash.com/random/300x300/?travel,barcelona" alt="Post" class="post-thumbnail" />
+        </div>
+        <div class="post-item">
+            <img src="https://source.unsplash.com/random/300x300/?travel,london" alt="Post" class="post-thumbnail" />
+        </div>
+        <div class="post-item">
+            <img src="https://source.unsplash.com/random/300x300/?travel,sydney" alt="Post" class="post-thumbnail" />
+        </div>
+        <div class="post-item">
+            <img src="https://source.unsplash.com/random/300x300/?travel,dubai" alt="Post" class="post-thumbnail" />
+        </div>
+    </div>
+</div>
+
+<style>
+    .main-content {
+        background-color: white;
+    }
+    .right-navbar {
+        display: none;
+    }
+
+    /* Adjust main content to take full width minus left navbar */
+    .main-content {
+        margin-right: 0;
+    }
+
+    /* Profile Page Styles */
+    .profile-page {
+        max-width: 935px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+
+    .profile-header {
+        margin-bottom: 44px;
+    }
+
+    .profile-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .profile-image-container {
+        margin-right: 80px;
+    }
+
+    .profile-image {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .profile-details {
+        flex: 1;
+    }
+
+    .profile-name-actions {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .profile-name {
+        font-size: 28px;
+        font-weight: bold;
+        margin: 0;
+        margin-right: 20px;
+        color: black;
+    }
+
+    .edit-profile-btn {
+        padding: 5px 9px;
+        background-color: #2F4F4F;
+        color: white;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+        .edit-profile-btn:hover {
+            background-color: #3d6666;
+        }
+
+    .profile-stats {
+        display: flex;
+        margin-bottom: 20px;
+    }
+
+    .stat-item {
+        margin-right: 40px;
+        font-size: 16px;
+    }
+
+    .stat-value {
+        font-weight: 600;
+        color: black;
+    }
+
+    .stat-label {
+        color: #898F99;
+        margin-left: 5px;
+    }
+
+    .profile-divider {
+        border: none;
+        border-top: 1px solid #dbdbdb;
+        margin: 0 0 44px 0;
+    }
+
+    .posts-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
+    }
+
+    .post-item {
+        aspect-ratio: 1/1;
+        overflow: hidden;
+        cursor: pointer;
+        position: relative;
+    }
+
+        .post-item:hover::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+    .post-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const postItems = document.querySelectorAll('.post-item');
+        postItems.forEach((item, index) => {
+            item.addEventListener('click', function () {
+                // Use Home/Post since Post is in HomeController
+                window.location.href = `/Home/Post?id=${index + 1}`;
+            });
+        });
+    });
+</script>
