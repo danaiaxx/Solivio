@@ -148,10 +148,8 @@
         </div>
 
         <form class="security-form" asp-action="Securityquestion"  method="post">
-            <!-- Hidden field to store the email/username from previous step -->
             <input type="hidden" id="emailOrUsername" name="emailOrUsername" value="@ViewData["EmailOrUsername"]" />
 
-            <!-- This will be dynamically populated from the backend -->
             <div class="question-text">@securityQuestion</div>
 
             <input type="text" class="form-input" id="securityAnswer" name="securityAnswer" placeholder="Your Answer" required />

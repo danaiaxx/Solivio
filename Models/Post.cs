@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Solivio.Models
 {
@@ -8,13 +9,13 @@ namespace Solivio.Models
 
         [Required]
         public int UserId { get; set; }
-        public User User { get; set; }
+        public User? User { get; set; }
 
         [Required]
-        public string Location { get; set; }
+        public string Location { get; set; } = null!;
 
         [Required]
-        public string Caption { get; set; }
+        public string Caption { get; set; } = null!;
 
         public DateTime DatePosted { get; set; } = DateTime.UtcNow;
 

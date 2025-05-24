@@ -10,7 +10,6 @@ public class PostImage
 
     public string? ContentType { get; set; }
 
-    // Foreign key to Post
     public int PostId { get; set; }
     public Post? Post { get; set; }
 }

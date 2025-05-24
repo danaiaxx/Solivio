@@ -4,22 +4,17 @@
 
 <div class="create-post-page">
     <div class="create-post-container">
-        <!-- Upload Media Section -->
         <div class="upload-section">
             <div class="upload-container" id="upload-container">
-                <!-- Carousel for uploaded images -->
                 <div class="carousel-container" id="carousel-container">
                     <div class="carousel-inner" id="carousel-inner">
-                        <!-- Images will be added here dynamically -->
                     </div>
                     <button class="carousel-control prev" id="prev-btn" disabled>&lt;</button>
                     <button class="carousel-control next" id="next-btn" disabled>&gt;</button>
                 </div>
 
-                <!-- Upload button that remains visible -->
                 <div class="upload-button-container">
                     <div class="upload-button" id="upload-button">
-                        
                         <p class="upload-text">Upload media <span id="upload-count">(0/5)</span></p>
                         <input type="file" id="media-upload" accept="image/*" multiple class="hidden" />
                     </div>
@@ -27,14 +22,18 @@
             </div>
         </div>
 
-        <!-- Post Form -->
-        <form class="post-form" id="post-form">
+        <form class="post-form" id="post-form" method="post" action="@Url.Action("CreatePost", "Home")" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
             <div class="form-group">
-                <textarea id="caption" name="caption" placeholder="Caption" class="form-input caption-input" rows="6"></textarea>
+                <textarea id="caption" name="caption" placeholder="Caption" class="form-input caption-input" rows="6" required></textarea>
             </div>
             <div class="form-group">
-                <input type="text" id="location" name="location" placeholder="Location" class="form-input" />
+                <input type="text" id="location" name="location" placeholder="Location" class="form-input" required />
             </div>
+
+            <div id="hidden-file-inputs"></div>
+
             <div class="form-group">
                 <button type="submit" class="post-btn" id="post-btn" disabled>Post</button>
             </div>
@@ -49,10 +48,209 @@
     </div>
 </div>
 
+<script>
+    function showModal(message) {
+        const modal = document.getElementById('message-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalClose = document.getElementById('modal-close');
+
+        modalMessage.textContent = message;
+        modal.classList.remove('hidden');
+
+        modalClose.onclick = function () {
+            modal.classList.add('hidden');
+        };
+
+        window.onclick = function (event) {
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+            }
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const uploadButton = document.getElementById('upload-button');
+        const fileInput = document.getElementById('media-upload');
+        const uploadCount = document.getElementById('upload-count');
+        const carouselContainer = document.getElementById('carousel-container');
+        const carouselInner = document.getElementById('carousel-inner');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const postBtn = document.getElementById('post-btn');
+        const postForm = document.getElementById('post-form');
+        const hiddenFileInputs = document.getElementById('hidden-file-inputs');
+
+        let uploadedFiles = [];
+        let uploadedImages = [];
+        let currentIndex = 0;
+        const maxImages = 5;
+
+        uploadButton.addEventListener('click', function() {
+            if (uploadedImages.length >= maxImages) {
+                showModal(`You can only upload up to ${maxImages} images. Please remove some images before adding more.`);
+                return;
+            }
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', handleFileSelect);
+        prevBtn.addEventListener('click', showPreviousImage);
+        nextBtn.addEventListener('click', showNextImage);
+
+        postForm.addEventListener('submit', function(e) {
+            if (uploadedFiles.length === 0) {
+                e.preventDefault();
+                showModal('Please upload at least one image.');
+                return;
+            }
+
+            updateHiddenFileInputs();
+        });
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+
+            if (files.length > 0) {
+                const remainingSlots = maxImages - uploadedFiles.length;
+                const filesToProcess = Math.min(remainingSlots, files.length);
+
+                if (filesToProcess < files.length) {
+                    showModal(`You can only add ${remainingSlots} more image(s). Only the first ${filesToProcess} image(s) will be added.`);
+                }
+
+                for (let i = 0; i < filesToProcess; i++) {
+                    const file = files[i];
+
+                    if (!file.type.match('image.*')) {
+                        showModal('Please upload only image files.');
+                        continue;
+                    }
+
+                    uploadedFiles.push(file);
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        uploadedImages.push(e.target.result);
+                        updateCarousel();
+                    };
+                    reader.readAsDataURL(file);
+                }
+
+                fileInput.value = '';
+            }
+        }
+
+        function updateHiddenFileInputs() {
+            hiddenFileInputs.innerHTML = '';
+
+            uploadedFiles.forEach((file, index) => {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'file';
+                hiddenInput.name = 'media';
+                hiddenInput.style.display = 'none';
+
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                hiddenInput.files = dt.files;
+
+                hiddenFileInputs.appendChild(hiddenInput);
+            });
+        }
+
+        function updateCarousel() {
+            uploadCount.textContent = `(${uploadedImages.length}/${maxImages})`;
+            postBtn.disabled = uploadedImages.length === 0;
+
+            if (uploadedImages.length > 0) {
+                carouselContainer.classList.add('active');
+                carouselInner.innerHTML = '';
+
+                uploadedImages.forEach((src, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'carousel-item';
+
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.className = 'carousel-image';
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-image';
+                    removeBtn.innerHTML = '&times;';
+                    removeBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        removeImage(index);
+                    });
+
+                    item.appendChild(img);
+                    item.appendChild(removeBtn);
+                    carouselInner.appendChild(item);
+                });
+
+                showImage(0);
+                updateNavButtons();
+            } else {
+                carouselContainer.classList.remove('active');
+            }
+        }
+
+        function showImage(index) {
+            if (uploadedImages.length === 0) return;
+            currentIndex = index;
+            carouselInner.style.transform = `translateX(-${currentIndex * 100}%)`;
+            updateNavButtons();
+        }
+
+        function showPreviousImage() {
+            if (currentIndex > 0) {
+                showImage(currentIndex - 1);
+            }
+        }
+
+        function showNextImage() {
+            if (currentIndex < uploadedImages.length - 1) {
+                showImage(currentIndex + 1);
+            }
+        }
+
+        function updateNavButtons() {
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === uploadedImages.length - 1;
+        }
+
+        function removeImage(index) {
+            uploadedFiles.splice(index, 1);
+            uploadedImages.splice(index, 1);
+
+            updateCarousel();
+
+            if (currentIndex >= uploadedImages.length) {
+                currentIndex = Math.max(0, uploadedImages.length - 1);
+                showImage(currentIndex);
+            }
+        }
+
+        function resetForm() {
+            uploadedFiles = [];
+            uploadedImages = [];
+            currentIndex = 0;
+            postForm.reset();
+            updateCarousel();
+        }
+
+        @if (TempData["Message"] != null)
+        {
+                <text>
+                showModal('@TempData["Message"]');
+                </text>
+        }
+    });
+</script>
+
 <style>
     * {
         font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
+
     .right-navbar {
         display: none;
     }
@@ -289,198 +487,3 @@
         cursor: pointer;
     }
 </style>
-
-<script>
-        function showModal(message) {
-        const modal = document.getElementById('message-modal');
-        const modalMessage = document.getElementById('modal-message');
-        const modalClose = document.getElementById('modal-close');
-
-        modalMessage.textContent = message;
-        modal.classList.remove('hidden');
-
-        modalClose.onclick = function () {
-            modal.classList.add('hidden');
-        };
-
-        window.onclick = function (event) {
-            if (event.target === modal) {
-                modal.classList.add('hidden');
-            }
-        };
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-        const uploadButton = document.getElementById('upload-button');
-        const fileInput = document.getElementById('media-upload');
-        const uploadCount = document.getElementById('upload-count');
-        const carouselContainer = document.getElementById('carousel-container');
-        const carouselInner = document.getElementById('carousel-inner');
-        const prevBtn = document.getElementById('prev-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const postBtn = document.getElementById('post-btn');
-        const postForm = document.getElementById('post-form');
-
-        let uploadedImages = [];
-        let currentIndex = 0;
-        const maxImages = 5;
-
-        uploadButton.addEventListener('click', function() {
-            // Check if we've reached the maximum number of images
-            if (uploadedImages.length >= maxImages) {
-                showModal(`You can only upload up to ${maxImages} images. Please remove some images before adding more.`);
-                return;
-            }
-
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', handleFileSelect);
-        prevBtn.addEventListener('click', showPreviousImage);
-        nextBtn.addEventListener('click', showNextImage);
-
-        postForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            if (uploadedImages.length === 0) {
-                showModal('Please upload at least one image.');
-                return;
-            }
-
-            showModal('Post created successfully!');
-
-            resetForm();
-        });
-
-        function handleFileSelect(e) {
-            const files = e.target.files;
-
-            if (files.length > 0) {
-                const remainingSlots = maxImages - uploadedImages.length;
-                const filesToProcess = Math.min(remainingSlots, files.length);
-
-                if (filesToProcess < files.length) {
-                    showModal(`You can only add ${remainingSlots} more image(s). Only the first ${filesToProcess} image(s) will be added.`);
-                }
-
-                for (let i = 0; i < filesToProcess; i++) {
-                    const file = files[i];
-
-                    if (!file.type.match('image.*')) {
-                        showModal('Please upload only image files.');
-                        continue;
-                    }
-
-                    const reader = new FileReader();
-
-                    reader.onload = function(e) {
-                        uploadedImages.push(e.target.result);
-
-                        updateCarousel();
-                    };
-
-                    reader.readAsDataURL(file);
-                }
-
-                fileInput.value = '';
-            }
-        }
-
-        function updateCarousel() {
-            // Update count
-            uploadCount.textContent = `(${uploadedImages.length}/${maxImages})`;
-
-            // Enable/disable post button
-            postBtn.disabled = uploadedImages.length === 0;
-
-            if (uploadedImages.length > 0) {
-                // Show carousel
-                carouselContainer.classList.add('active');
-
-                // Clear carousel
-                carouselInner.innerHTML = '';
-
-                // Add images to carousel
-                uploadedImages.forEach((src, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'carousel-item';
-
-                    const img = document.createElement('img');
-                    img.src = src;
-                    img.className = 'carousel-image';
-
-                    const removeBtn = document.createElement('button');
-                    removeBtn.className = 'remove-image';
-                    removeBtn.innerHTML = '&times;';
-                    removeBtn.addEventListener('click', function(e) {
-                        e.stopPropagation(); // Prevent event bubbling
-                        removeImage(index);
-                    });
-
-                    item.appendChild(img);
-                    item.appendChild(removeBtn);
-                    carouselInner.appendChild(item);
-                });
-
-                // Show first image
-                showImage(0);
-
-                // Update navigation buttons
-                updateNavButtons();
-            } else {
-                // Hide carousel
-                carouselContainer.classList.remove('active');
-            }
-        }
-
-        function showImage(index) {
-            if (uploadedImages.length === 0) return;
-
-            currentIndex = index;
-            carouselInner.style.transform = `translateX(-${currentIndex * 100}%)`;
-            updateNavButtons();
-        }
-
-        function showPreviousImage() {
-            if (currentIndex > 0) {
-                showImage(currentIndex - 1);
-            }
-        }
-
-        function showNextImage() {
-            if (currentIndex < uploadedImages.length - 1) {
-                showImage(currentIndex + 1);
-            }
-        }
-
-        function updateNavButtons() {
-            prevBtn.disabled = currentIndex === 0;
-            nextBtn.disabled = currentIndex === uploadedImages.length - 1;
-        }
-
-        function removeImage(index) {
-            // Remove image from array
-            uploadedImages.splice(index, 1);
-
-            // Update carousel
-            updateCarousel();
-
-            // Adjust current index if needed
-            if (currentIndex >= uploadedImages.length) {
-                currentIndex = Math.max(0, uploadedImages.length - 1);
-                showImage(currentIndex);
-            }
-        }
-
-        function resetForm() {
-            // Clear uploaded images
-            uploadedImages = [];
-            currentIndex = 0;
-
-            // Reset form fields
-            postForm.reset();
-
-            // Update UI
-            updateCarousel();
-        }
-    });
-</script>

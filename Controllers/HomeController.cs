@@ -1,11 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.EntityFrameworkCore;
 using Solivio.Data;
 using Solivio.Models;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Solivio.Controllers
 {
@@ -34,7 +36,8 @@ namespace Solivio.Controllers
             if (user != null)
             {
                 HttpContext.Session.SetString("Username", user.Username);
-                return View("Feed");
+                HttpContext.Session.SetInt32("UserId", user.Id);
+                return RedirectToAction("Feed");
             }
 
             ViewBag.Error = "Invalid email/username or password.";
@@ -47,10 +50,12 @@ namespace Solivio.Controllers
             base.OnActionExecuting(context);
         }
 
-        public IActionResult Logout()
+        [HttpPost]
+        public async Task<IActionResult> Logout()
         {
+            await HttpContext.SignOutAsync();
             HttpContext.Session.Clear();
-            return RedirectToAction("Login");
+            return RedirectToAction("Login", "Home");
         }
 
         public IActionResult Signup()
@@ -157,15 +162,67 @@ namespace Solivio.Controllers
             return RedirectToAction("Login");
         }
 
-        public IActionResult Feed()
+        public async Task<IActionResult> Feed()
         {
-            return View();
+            int? userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null)
+            {
+                return RedirectToAction("Login");
+            }
+
+            try
+            {
+                var allPosts = await _context.Posts
+                    .AsNoTracking()
+                    .Include(p => p.User)
+                    .Include(p => p.Images)
+                    .OrderByDescending(p => p.DatePosted)
+                    .ToListAsync();
+
+                int userPostCount = await _context.Posts
+                .Where(p => p.UserId == userId)
+                .CountAsync();
+
+                ViewBag.PostCount = userPostCount;
+
+                foreach (var post in allPosts)
+                {
+                    if (post.Images == null)
+                    {
+                        post.Images = new List<PostImage>();
+                    }
+
+                    Console.WriteLine($"Post {post.Id}: User={post.User?.Username}, Images={post.Images.Count}, Caption={post.Caption}");
+                }
+
+                return View(allPosts);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading posts: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return View(new List<Post>());
+            }
         }
 
 
-        public IActionResult Profile()
+        public async Task<IActionResult> Profile()
         {
-            return View();
+            int? userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null)
+            {
+                return RedirectToAction("Login");
+            }
+
+            var userPosts = await _context.Posts
+                .Where(p => p.UserId == userId)
+                .Include(p => p.Images)
+                .OrderByDescending(p => p.DatePosted)
+                .ToListAsync();
+
+            ViewBag.PostCount = userPosts.Count;
+
+            return View(userPosts);
         }
 
         public IActionResult Settings()
@@ -290,15 +347,34 @@ namespace Solivio.Controllers
             return File("~/images/default-profile.png", "image/png");
         }
 
+        public IActionResult GetUserProfileImage(int userId)
+        {
+            var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+            if (user == null)
+                return File("~/images/default-profile.png", "image/png");
+
+            if (user.ProfileImageData != null && user.ProfileImageData.Length > 0)
+            {
+                string contentType = user.ProfileImageContentType ?? "image/png";
+                return File(user.ProfileImageData, contentType);
+            }
+
+            if (!string.IsNullOrEmpty(user.ProfileImage))
+            {
+                string fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", user.ProfileImage.TrimStart('/'));
+                if (System.IO.File.Exists(fullPath))
+                {
+                    var contentType = "image/" + Path.GetExtension(fullPath).Trim('.');
+                    return PhysicalFile(fullPath, contentType);
+                }
+            }
+
+            return File("~/images/default-profile.png", "image/png");
+        }
+
 
         public IActionResult Createpost()
         {
-            return View();
-        }
-
-        public IActionResult Post(int id)
-        {
-            ViewBag.PostId = id;
             return View();
         }
 
@@ -306,83 +382,111 @@ namespace Solivio.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreatePost(List<IFormFile> media, string caption, string location)
         {
-            if (!User.Identity.IsAuthenticated)
+            string? username = HttpContext.Session.GetString("Username");
+            if (string.IsNullOrEmpty(username))
             {
-                return Unauthorized();
+                return RedirectToAction("Login");
+            }
+
+            var user = _context.Users.FirstOrDefault(u => u.Username == username);
+            if (user == null)
+            {
+                return RedirectToAction("Login");
             }
 
             if (media == null || media.Count == 0)
             {
                 ModelState.AddModelError("media", "Please upload at least one image.");
-                return View();
+                return View("Createpost");
             }
+
             if (media.Count > 5)
             {
                 ModelState.AddModelError("media", "You can upload up to 5 images only.");
-                return View();
-            }
-            if (string.IsNullOrWhiteSpace(caption) || string.IsNullOrWhiteSpace(location))
-            {
-                ModelState.AddModelError(string.Empty, "Caption and Location are required.");
-                return View();
+                return View("Createpost");
             }
 
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            if (!Directory.Exists(uploadsFolder))
-                Directory.CreateDirectory(uploadsFolder);
-
-            // Get logged-in user id from claims
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdString, out int currentUserId))
+            if (string.IsNullOrWhiteSpace(caption))
             {
-                return Unauthorized();
+                ModelState.AddModelError("caption", "Caption is required.");
+                return View("Createpost");
             }
 
-            var post = new Post
+            if (string.IsNullOrWhiteSpace(location))
             {
-                Caption = caption,
-                Location = location,
-                UserId = currentUserId,
-                DatePosted = DateTime.UtcNow,
-                Images = new List<PostImage>()
-            };
+                ModelState.AddModelError("location", "Location is required.");
+                return View("Createpost");
+            }
 
-            foreach (var file in media)
+            try
             {
-                if (file.Length > 0 && file.ContentType.StartsWith("image/"))
+                var post = new Post
                 {
-                    var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    Caption = caption.Trim(),
+                    Location = location.Trim(),
+                    UserId = user.Id,
+                    DatePosted = DateTime.UtcNow,
+                    Images = new List<PostImage>()
+                };
 
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                foreach (var file in media)
+                {
+                    if (file.Length > 0 && file.ContentType.StartsWith("image/"))
                     {
-                        await file.CopyToAsync(stream);
-                    }
-
-                    using (var ms = new MemoryStream())
-                    {
-                        await file.CopyToAsync(ms);
-                        var fileBytes = ms.ToArray();
-
-                        post.Images.Add(new PostImage
+                        if (file.Length > 5 * 1024 * 1024)
                         {
-                            ImageData = fileBytes,
-                            ContentType = file.ContentType
-                        });
+                            ModelState.AddModelError("media", $"Image {file.FileName} is too large. Maximum size is 5MB.");
+                            return View("Createpost");
+                        }
+
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            await file.CopyToAsync(memoryStream);
+                            var imageData = memoryStream.ToArray();
+
+                            var postImage = new PostImage
+                            {
+                                ImageData = imageData,
+                                ContentType = file.ContentType,
+                                Post = post
+                            };
+
+                            post.Images.Add(postImage);
+                        }
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("media", "Only image files are allowed.");
+                        return View("Createpost");
                     }
                 }
-                else
-                {
-                    ModelState.AddModelError("media", "Only image files are allowed.");
-                    return View();
-                }
+
+                _context.Posts.Add(post);
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = "Post created successfully!";
+                return RedirectToAction("Createpost");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating post for user {Username}", username);
+
+                ModelState.AddModelError("", "An error occurred while creating your post. Please try again.");
+                return View("Createpost");
+            }
+        }
+
+        public IActionResult GetPostImage(int imageId)
+        {
+            var postImage = _context.Set<PostImage>().FirstOrDefault(pi => pi.Id == imageId);
+
+            if (postImage?.ImageData != null)
+            {
+                string contentType = postImage.ContentType ?? "image/jpeg";
+                return File(postImage.ImageData, contentType);
             }
 
-            _context.Posts.Add(post);
-            await _context.SaveChangesAsync();
-
-            TempData["Message"] = "Post created successfully!";
-            return RedirectToAction("CreatePost");
+            return NotFound();
         }
     }
 }

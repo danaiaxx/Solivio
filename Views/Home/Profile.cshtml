@@ -1,4 +1,6 @@
-﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+﻿@model List<Solivio.Models.Post>
+
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 
 @{
     var username = HttpContextAccessor.HttpContext.Session.GetString("Username");
@@ -9,7 +11,6 @@
 }
 
 <div class="profile-page">
-    <!-- Profile Header Section -->
     <div class="profile-header">
         <div class="profile-info">
             <div class="profile-image-container">
@@ -22,7 +23,7 @@
                 </div>
                 <div class="profile-stats">
                     <div class="stat-item">
-                        <span class="stat-value">3</span>
+                        <span class="stat-value">@ViewBag.PostCount</span>
                         <span class="stat-label">Posts</span>
                     </div>
                 </div>
@@ -32,52 +33,37 @@
 
     <hr class="profile-divider" />
 
-    <!-- Profile Posts Grid -->
     <div class="posts-grid">
-        <div class="post-item">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/56/White_shark.jpg" alt="Post" class="post-thumbnail" />
-        </div>
-        <div class="post-item">
-            <img src="https://source.unsplash.com/random/300x300/?travel,paris" alt="Post" class="post-thumbnail" />
-        </div>
-        <div class="post-item">
-            <img src="https://source.unsplash.com/random/300x300/?travel,tokyo" alt="Post" class="post-thumbnail" />
-        </div>
-        <div class="post-item">
-            <img src="https://source.unsplash.com/random/300x300/?travel,newyork" alt="Post" class="post-thumbnail" />
-        </div>
-        <div class="post-item">
-            <img src="https://source.unsplash.com/random/300x300/?travel,rome" alt="Post" class="post-thumbnail" />
-        </div>
-        <div class="post-item">
-            <img src="https://source.unsplash.com/random/300x300/?travel,barcelona" alt="Post" class="post-thumbnail" />
-        </div>
-        <div class="post-item">
-            <img src="https://source.unsplash.com/random/300x300/?travel,london" alt="Post" class="post-thumbnail" />
-        </div>
-        <div class="post-item">
-            <img src="https://source.unsplash.com/random/300x300/?travel,sydney" alt="Post" class="post-thumbnail" />
-        </div>
-        <div class="post-item">
-            <img src="https://source.unsplash.com/random/300x300/?travel,dubai" alt="Post" class="post-thumbnail" />
-        </div>
+        @foreach (var post in Model)
+        {
+            <div class="post-item" data-post-id="@post.Id">
+                @{
+                    var firstImage = post.Images?.FirstOrDefault();
+                    var imageUrl = firstImage != null
+                    ? Url.Action("GetPostImage", "Home", new { imageId = firstImage.Id })
+                    : "https://via.placeholder.com/300";
+                }
+                <img src="@imageUrl" alt="Post Image" class="post-thumbnail" />
+                <p>@post.Caption</p>
+            </div>
+        }
     </div>
+
 </div>
 
 <style>
     .main-content {
         background-color: white;
     }
+
     .right-navbar {
         display: none;
     }
 
-    /* Adjust main content to take full width minus left navbar */
     .main-content {
         margin-right: 0;
     }
 
-    /* Profile Page Styles */
     .profile-page {
         max-width: 935px;
         margin: 0 auto;
@@ -172,19 +158,8 @@
     .post-item {
         aspect-ratio: 1/1;
         overflow: hidden;
-        cursor: pointer;
         position: relative;
     }
-
-        .post-item:hover::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.3);
-        }
 
     .post-thumbnail {
         width: 100%;
@@ -192,15 +167,3 @@
         object-fit: cover;
     }
 </style>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const postItems = document.querySelectorAll('.post-item');
-        postItems.forEach((item, index) => {
-            item.addEventListener('click', function () {
-                // Use Home/Post since Post is in HomeController
-                window.location.href = `/Home/Post?id=${index + 1}`;
-            });
-        });
-    });
-</script>

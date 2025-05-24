@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Solivio.Data;
 
@@ -15,6 +16,12 @@ namespace Solivio
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Home/Login";
+                });
+
             builder.Services.AddHttpContextAccessor();
 
 
@@ -30,7 +37,6 @@ namespace Solivio
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -44,7 +50,22 @@ namespace Solivio
             app.UseSession();
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
+
+            app.Use(async (context, next) =>
+            {
+                // Check if request is for static files
+                var path = context.Request.Path.ToString();
+                if (!path.StartsWith("/css") && !path.StartsWith("/js") && !path.StartsWith("/images") && !path.StartsWith("/lib"))
+                {
+                    context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                    context.Response.Headers["Pragma"] = "no-cache";
+                    context.Response.Headers["Expires"] = "0";
+                }
+
+                await next();
+            });
 
             app.MapControllerRoute(
                 name: "default",

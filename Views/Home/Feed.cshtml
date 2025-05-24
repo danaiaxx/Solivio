@@ -1,107 +1,184 @@
-﻿@{
+﻿@model List<Solivio.Models.Post>
+@{
     ViewData["Title"] = "Feed";
 }
 
 <div class="feed-container">
-    <!-- Post 1 -->
-    <div class="post-card">
-        <div class="post-header">
-            <div class="post-user">
-                <img src="~/images/default-profile.png" alt="Profile" class="post-profile-img" />
-                <div class="post-user-info">
-                    <div class="post-username">username <span class="post-date">• 2 hours ago</span></div>
-                    <div class="post-location">Bali, Indonesia</div>
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var post in Model)
+        {
+            <div class="post-card">
+                <div class="post-header">
+                    <div class="post-user">
+                        @if (!string.IsNullOrEmpty(post.User?.ProfileImage) || (post.User?.ProfileImageData != null && post.User.ProfileImageData.Length > 0))
+                        {
+                            <img src="@Url.Action("GetUserProfileImage", "Home", new { userId = post.UserId })" alt="Profile" class="post-profile-img" />
+                        }
+                        else
+                        {
+                            <img src="~/images/default-profile.png" alt="Profile" class="post-profile-img" />
+                        }
+                        <div class="post-user-info">
+                            <div class="post-username">
+                                @post.User?.Username 
+                                <span class="post-date">• @GetTimeAgo(post.DatePosted)</span>
+                            </div>
+                            <div class="post-location">@post.Location</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="post-caption">
-            This section is the user's caption. Exploring the beautiful beaches and rice terraces of Bali!
-        </div>
-
-        <div class="post-image-container">
-            <img src="https://source.unsplash.com/random/600x600/?bali" alt="Post image" class="post-image" />
-        </div>
-
-        <div class="post-actions">
-            <div class="post-likes">
-                <span>0 likes</span>
-            </div>
-        </div>
-
-        <div class="post-interaction">
-            <button class="like-button">
-                <img src="~/images/heart-icon.png" alt="Like" class="interaction-icon" />
-            </button>
-        </div>
-    </div>
-
-    <!-- Post 2 -->
-    <div class="post-card">
-        <div class="post-header">
-            <div class="post-user">
-                <img src="~/images/default-profile.png" alt="Profile" class="post-profile-img" />
-                <div class="post-user-info">
-                    <div class="post-username">username <span class="post-date">• 1 day ago</span></div>
-                    <div class="post-location">Santorini, Greece</div>
+                <div class="post-caption">
+                    @post.Caption
                 </div>
+
+                @if (post.Images != null && post.Images.Any())
+                {
+                    @if (post.Images.Count == 1)
+                    {
+                        <div class="post-image-container">
+                            <img src="@Url.Action("GetPostImage", "Home", new { imageId = post.Images.First().Id })" 
+                                 alt="Post image" class="post-image" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="post-image-container">
+                            <div class="post-carousel" data-post-id="@post.Id">
+                                <div class="carousel-wrapper">
+                                    @for (int i = 0; i < post.Images.Count; i++)
+                                    {
+                                        <div class="carousel-slide @(i == 0 ? "active" : "")">
+                                            <img src="@Url.Action("GetPostImage", "Home", new { imageId = post.Images[i].Id })" 
+                                                 alt="Post image" class="post-image" />
+                                        </div>
+                                    }
+                                </div>
+                                
+                                @if (post.Images.Count > 1)
+                                {
+                                    <button class="carousel-btn prev-btn" onclick="changeSlide(@post.Id, -1)">‹</button>
+                                    <button class="carousel-btn next-btn" onclick="changeSlide(@post.Id, 1)">›</button>
+                                    
+                                    <div class="carousel-dots">
+                                        @for (int i = 0; i < post.Images.Count; i++)
+                                        {
+                                            <span class="dot @(i == 0 ? "active" : "")" onclick="currentSlide(@post.Id, @(i + 1))"></span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
             </div>
+        }
+    }
+    else
+    {
+        <div class="no-posts">
+            <h3>No posts yet!</h3>
+            <p>Be the first to share something amazing.</p>
+            <a href="@Url.Action("Createpost", "Home")" class="create-post-link">Create your first post</a>
         </div>
-
-        <div class="post-caption">
-            This section is the user's caption. The white buildings and blue domes of Santorini are absolutely breathtaking!
-        </div>
-
-        <div class="post-image-container">
-            <img src="https://source.unsplash.com/random/600x600/?santorini" alt="Post image" class="post-image" />
-        </div>
-
-        <div class="post-actions">
-            <div class="post-likes">
-                <span>24 likes</span>
-            </div>
-        </div>
-
-        <div class="post-interaction">
-            <button class="like-button">
-                <img src="~/images/heart-icon.png" alt="Like" class="interaction-icon" />
-            </button>
-        </div>
-    </div>
-
-    <!-- Post 3 -->
-    <div class="post-card">
-        <div class="post-header">
-            <div class="post-user">
-                <img src="~/images/default-profile.png" alt="Profile" class="post-profile-img" />
-                <div class="post-user-info">
-                    <div class="post-username">username <span class="post-date">• 3 days ago</span></div>
-                    <div class="post-location">Kyoto, Japan</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="post-caption">
-            This section is the user's caption. Exploring the ancient temples and beautiful gardens of Kyoto.
-        </div>
-
-        <div class="post-image-container">
-            <img src="https://source.unsplash.com/random/600x600/?kyoto" alt="Post image" class="post-image" />
-        </div>
-
-        <div class="post-actions">
-            <div class="post-likes">
-                <span>42 likes</span>
-            </div>
-        </div>
-
-        <div class="post-interaction">
-            <button class="like-button">
-                <img src="~/images/heart-icon.png" alt="Like" class="interaction-icon" />
-            </button>
-        </div>
-    </div>
+    }
 </div>
+
+@functions {
+    public string GetTimeAgo(DateTime dateTime)
+    {
+        var timeSpan = DateTime.UtcNow - dateTime;
+        
+        if (timeSpan.TotalDays >= 1)
+        {
+            int days = (int)timeSpan.TotalDays;
+            return days == 1 ? "1 day ago" : $"{days} days ago";
+        }
+        else if (timeSpan.TotalHours >= 1)
+        {
+            int hours = (int)timeSpan.TotalHours;
+            return hours == 1 ? "1 hour ago" : $"{hours} hours ago";
+        }
+        else if (timeSpan.TotalMinutes >= 1)
+        {
+            int minutes = (int)timeSpan.TotalMinutes;
+            return minutes == 1 ? "1 minute ago" : $"{minutes} minutes ago";
+        }
+        else
+        {
+            return "Just now";
+        }
+    }
+}
+
+<script>
+    // Carousel functionality
+    const carousels = {};
+
+    function initializeCarousels() {
+        document.querySelectorAll('.post-carousel').forEach(carousel => {
+            const postId = carousel.dataset.postId;
+            carousels[postId] = {
+                currentSlide: 0,
+                totalSlides: carousel.querySelectorAll('.carousel-slide').length
+            };
+        });
+    }
+
+    function changeSlide(postId, direction) {
+        const carousel = carousels[postId];
+        if (!carousel) return;
+
+        const carouselElement = document.querySelector(`[data-post-id="${postId}"]`);
+        const slides = carouselElement.querySelectorAll('.carousel-slide');
+        const dots = carouselElement.querySelectorAll('.dot');
+
+        slides[carousel.currentSlide].classList.remove('active');
+        if (dots[carousel.currentSlide]) {
+            dots[carousel.currentSlide].classList.remove('active');
+        }
+
+        carousel.currentSlide += direction;
+        
+        if (carousel.currentSlide >= carousel.totalSlides) {
+            carousel.currentSlide = 0;
+        } else if (carousel.currentSlide < 0) {
+            carousel.currentSlide = carousel.totalSlides - 1;
+        }
+
+        slides[carousel.currentSlide].classList.add('active');
+        if (dots[carousel.currentSlide]) {
+            dots[carousel.currentSlide].classList.add('active');
+        }
+    }
+
+    function currentSlide(postId, slideIndex) {
+        const carousel = carousels[postId];
+        if (!carousel) return;
+
+        const carouselElement = document.querySelector(`[data-post-id="${postId}"]`);
+        const slides = carouselElement.querySelectorAll('.carousel-slide');
+        const dots = carouselElement.querySelectorAll('.dot');
+
+        slides[carousel.currentSlide].classList.remove('active');
+        if (dots[carousel.currentSlide]) {
+            dots[carousel.currentSlide].classList.remove('active');
+        }
+
+        carousel.currentSlide = slideIndex - 1;
+
+        slides[carousel.currentSlide].classList.add('active');
+        if (dots[carousel.currentSlide]) {
+            dots[carousel.currentSlide].classList.add('active');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCarousels();
+    });
+</script>
+
 
 <style>
     .main-content {
@@ -136,6 +213,7 @@
         height: 32px;
         border-radius: 50%;
         margin-right: 12px;
+        object-fit: cover;
     }
 
     .post-user-info {
@@ -164,69 +242,125 @@
         font-size: 14px;
         line-height: 1.4;
         color: black;
+        word-wrap: break-word;
     }
 
     .post-image-container {
         width: 100%;
         background-color: #f0f0f0;
+        position: relative;
     }
 
     .post-image {
         width: 100%;
+        height: 654px;
+        object-fit: cover;
         display: block;
-        padding: 12px 16px;
-        background-color: white;
     }
 
-    .post-actions {
-        display: flex;
-        justify-content: space-between;
-        padding: 12px 16px;
-        border-bottom: 1px solid #efefef;
+    /* Carousel Styles */
+    .post-carousel {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
     }
 
-    .post-likes{
+    .carousel-wrapper {
+        position: relative;
+        width: 100%;
+        height: 654px;
+    }
+
+    .carousel-slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+    }
+
+    .carousel-slide.active {
+        opacity: 1;
+    }
+
+    .carousel-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 18px;
+        border-radius: 50%;
+        z-index: 2;
+        transition: background 0.3s;
+    }
+
+    .carousel-btn:hover {
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    .prev-btn {
+        left: 10px;
+    }
+
+    .next-btn {
+        right: 10px;
+    }
+
+    .carousel-dots {
+        position: absolute;
+        bottom: 15px;
+        left: 50%;
+        transform: translateX(-50%);
         display: flex;
-        align-items: center;
-        font-size: 14px;
+        gap: 8px;
+        z-index: 2;
+    }
+
+    .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .dot.active {
+        background: white;
+    }
+
+    .no-posts {
+        text-align: center;
+        padding: 60px 20px;
         color: #898F99;
     }
 
-    .like-icon {
-        width: 16px;
-        height: 16px;
-        margin-right: 6px;
+    .no-posts h3 {
+        margin-bottom: 10px;
+        color: #262626;
     }
 
-    .post-interaction {
-        display: flex;
-        padding: 8px 16px;
+    .create-post-link {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #2F4F4F;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: background-color 0.3s;
     }
 
-    .like-button, .comment-button {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 8px;
-        margin-right: 16px;
-    }
-
-    .interaction-icon {
-        width: 16px;
-        height: 16px;
-        transition: filter 0.3s;
-    }
-
-
-    .liked .interaction-icon {
-        filter: invert(27%) sepia(84%) saturate(5183%) hue-rotate(340deg) brightness(91%) contrast(99%);
+    .create-post-link:hover {
+        background-color: #3d6666;
+        text-decoration: none;
+        color: white;
     }
 </style>
-
-<script>
-    document.querySelectorAll('.like-button').forEach(button => {
-        button.addEventListener('click', function () {
-            this.classList.toggle('liked');
-        });
-    });
-</script>

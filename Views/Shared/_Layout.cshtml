@@ -20,7 +20,6 @@
             background-color: #fafafa;
         }
 
-        /* Left Navbar Styles */
         .left-navbar {
             width: 275px;
             height: 100vh;
@@ -60,7 +59,7 @@
 
             .nav-item.active {
                 background-color: #DBF2F2;
-                font-weight: 600; /* makes text bold */
+                font-weight: 600;
             }
 
                 .nav-item.active span {
@@ -105,16 +104,14 @@
             cursor: pointer;
         }
 
-        /* Main Content Container */
         .main-content {
             margin-left: 275px;
-            margin-right: 300px; /* Make space for right navbar */
+            margin-right: 300px;
             padding: 20px;
             min-height: 100vh;
             box-sizing: border-box;
         }
 
-        /* Right Navbar Styles */
         .right-navbar {
             width: 300px;
             position: fixed;
@@ -220,13 +217,14 @@
         <div class="user-profile">
             <img src="@Url.Action("GetProfileImage", "Home")?t=@DateTime.Now.Ticks" alt="Profile" class="profile-img" />
             <span class="username">@username</span>
-            <a href="/Home/Logout" class="nav-item">
-                <img src="~/images/logout-icon.png" alt="Logout" class="logout-icon" />
-            </a>
+            <form action="/Home/Logout" method="post" style="display:inline;">
+                <button type="submit" class="nav-item" style="background: none; border: none; padding: 0; cursor: pointer;">
+                    <img src="~/images/logout-icon.png" alt="Logout" class="logout-icon" />
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- Right Navbar Profile Section -->
     <div class="right-navbar">
         <div class="profile-header">
             <img src="@Url.Action("GetProfileImage", "Home")?t=@DateTime.Now.Ticks" alt="Profile" class="profile-picture" />
@@ -235,7 +233,7 @@
 
         <div class="profile-stats">
             <div class="stat-item">
-                <span class="stat-value">3</span>
+                <span class="stat-value">@ViewBag.PostCount</span>
                 <span class="stat-label">Posts</span>
             </div>
         </div>
@@ -247,6 +245,10 @@
         @RenderBody()
     </div>
     <script>
+            history.pushState(null, document.title, location.href);
+            window.addEventListener('popstate', function () {
+                history.pushState(null, document.title, location.href);
+            });
             document.addEventListener('DOMContentLoaded', function () {
             const currentPath = window.location.pathname.toLowerCase();
 

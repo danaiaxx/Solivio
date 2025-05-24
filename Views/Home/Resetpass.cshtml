@@ -141,7 +141,6 @@
         </div>
 
         <form class="resetpass-form" method="post" asp-action="Resetpass" asp-controller="Home">
-            <!-- Hidden fields to store data from previous steps -->
             <input type="hidden" id="emailOrUsername" name="emailOrUsername" value="@ViewData["EmailOrUsername"]" />
 
             <input type="password" class="form-input" id="newPassword" name="newPassword" placeholder="New password" required />
