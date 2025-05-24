@@ -39,3 +39,9 @@ Press F5 or click the Start button in Visual Studio.
 🌐 Access the app
 Open your browser and go to:
 https://localhost:5039
+
+🔑 Sample Credentials
+Use the following to log in and test the application:
+
+Username: _danaiaxx
+Password: 12345
