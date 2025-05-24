@@ -45,3 +45,6 @@ Use the following to log in and test the application:
 
 Username: _danaiaxx
 Password: 12345
+
+For testing the Forgot password functionality:
+Security answer: Cebu
