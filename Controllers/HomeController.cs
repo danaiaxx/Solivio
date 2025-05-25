@@ -376,14 +376,12 @@ namespace Solivio.Controllers
         {
             if (id.HasValue)
             {
-                // Check if user is logged in
                 int? userId = HttpContext.Session.GetInt32("UserId");
                 if (userId == null)
                 {
                     return RedirectToAction("Login");
                 }
 
-                // Load the post for editing
                 var post = await _context.Posts
                     .Include(p => p.Images)
                     .FirstOrDefaultAsync(p => p.Id == id.Value && p.UserId == userId.Value);
@@ -451,7 +449,6 @@ namespace Solivio.Controllers
 
                 if (isEditing)
                 {
-                    // Load existing post for editing
                     post = await _context.Posts
                         .Include(p => p.Images)
                         .FirstOrDefaultAsync(p => p.Id == postId.Value && p.UserId == user.Id);
@@ -462,11 +459,9 @@ namespace Solivio.Controllers
                         return RedirectToAction("Feed");
                     }
 
-                    // Update post details
                     post.Caption = caption.Trim();
                     post.Location = location.Trim();
 
-                    // Remove selected images
                     if (removedImageIds != null && removedImageIds.Any())
                     {
                         var imagesToRemove = post.Images.Where(img => removedImageIds.Contains(img.Id)).ToList();
@@ -478,7 +473,6 @@ namespace Solivio.Controllers
                 }
                 else
                 {
-                    // Create new post
                     post = new Post
                     {
                         Caption = caption.Trim(),
@@ -490,7 +484,6 @@ namespace Solivio.Controllers
                     _context.Posts.Add(post);
                 }
 
-                // Add new images if any
                 if (media != null && media.Any())
                 {
                     if (media.Count > 5)
@@ -503,7 +496,6 @@ namespace Solivio.Controllers
                         return View("Createpost");
                     }
 
-                    // Check total images after addition
                     int existingImageCount = isEditing ? post.Images.Count() : 0;
                     if (existingImageCount + media.Count > 5)
                     {
@@ -556,7 +548,6 @@ namespace Solivio.Controllers
                     }
                 }
 
-                // Validate that we have at least one image
                 if (!isEditing && (post.Images == null || !post.Images.Any()))
                 {
                     ModelState.AddModelError("media", "Please upload at least one image.");
@@ -593,7 +584,6 @@ namespace Solivio.Controllers
         {
             try
             {
-                // Check if user is logged in
                 int? userId = HttpContext.Session.GetInt32("UserId");
                 if (userId == null)
                 {
@@ -601,7 +591,6 @@ namespace Solivio.Controllers
                     return RedirectToAction("Login");
                 }
 
-                // Find the post and verify ownership
                 var post = await _context.Posts
                     .Include(p => p.Images)
                     .FirstOrDefaultAsync(p => p.Id == postId && p.UserId == userId.Value);
@@ -612,13 +601,11 @@ namespace Solivio.Controllers
                     return RedirectToAction("Feed");
                 }
 
-                // Remove all associated images first
                 if (post.Images != null && post.Images.Any())
                 {
                     _context.Set<PostImage>().RemoveRange(post.Images);
                 }
 
-                // Remove the post
                 _context.Posts.Remove(post);
                 await _context.SaveChangesAsync();
 
