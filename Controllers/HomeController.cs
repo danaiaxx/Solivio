@@ -372,15 +372,45 @@ namespace Solivio.Controllers
             return File("~/images/default-profile.png", "image/png");
         }
 
-
-        public IActionResult Createpost()
+        public async Task<IActionResult> Createpost(int? id = null)
         {
+            if (id.HasValue)
+            {
+                // Check if user is logged in
+                int? userId = HttpContext.Session.GetInt32("UserId");
+                if (userId == null)
+                {
+                    return RedirectToAction("Login");
+                }
+
+                // Load the post for editing
+                var post = await _context.Posts
+                    .Include(p => p.Images)
+                    .FirstOrDefaultAsync(p => p.Id == id.Value && p.UserId == userId.Value);
+
+                if (post == null)
+                {
+                    TempData["Message"] = "Post not found or you don't have permission to edit it.";
+                    return RedirectToAction("Feed");
+                }
+
+                ViewBag.IsEditing = true;
+                ViewBag.PostId = post.Id;
+                ViewBag.Caption = post.Caption;
+                ViewBag.Location = post.Location;
+                ViewBag.ExistingImages = post.Images?.ToList() ?? new List<PostImage>();
+            }
+            else
+            {
+                ViewBag.IsEditing = false;
+            }
+
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreatePost(List<IFormFile> media, string caption, string location)
+        public async Task<IActionResult> CreatePost(List<IFormFile> media, string caption, string location, int? postId = null, List<int>? removedImageIds = null)
         {
             string? username = HttpContext.Session.GetString("Username");
             if (string.IsNullOrEmpty(username))
@@ -394,86 +424,213 @@ namespace Solivio.Controllers
                 return RedirectToAction("Login");
             }
 
-            if (media == null || media.Count == 0)
-            {
-                ModelState.AddModelError("media", "Please upload at least one image.");
-                return View("Createpost");
-            }
-
-            if (media.Count > 5)
-            {
-                ModelState.AddModelError("media", "You can upload up to 5 images only.");
-                return View("Createpost");
-            }
-
             if (string.IsNullOrWhiteSpace(caption))
             {
                 ModelState.AddModelError("caption", "Caption is required.");
+                if (postId.HasValue)
+                {
+                    return RedirectToAction("Createpost", new { id = postId.Value });
+                }
                 return View("Createpost");
             }
 
             if (string.IsNullOrWhiteSpace(location))
             {
                 ModelState.AddModelError("location", "Location is required.");
+                if (postId.HasValue)
+                {
+                    return RedirectToAction("Createpost", new { id = postId.Value });
+                }
                 return View("Createpost");
             }
 
             try
             {
-                var post = new Post
-                {
-                    Caption = caption.Trim(),
-                    Location = location.Trim(),
-                    UserId = user.Id,
-                    DatePosted = DateTime.UtcNow,
-                    Images = new List<PostImage>()
-                };
+                Post post;
+                bool isEditing = postId.HasValue;
 
-                foreach (var file in media)
+                if (isEditing)
                 {
-                    if (file.Length > 0 && file.ContentType.StartsWith("image/"))
+                    // Load existing post for editing
+                    post = await _context.Posts
+                        .Include(p => p.Images)
+                        .FirstOrDefaultAsync(p => p.Id == postId.Value && p.UserId == user.Id);
+
+                    if (post == null)
                     {
-                        if (file.Length > 5 * 1024 * 1024)
+                        TempData["Message"] = "Post not found or you don't have permission to edit it.";
+                        return RedirectToAction("Feed");
+                    }
+
+                    // Update post details
+                    post.Caption = caption.Trim();
+                    post.Location = location.Trim();
+
+                    // Remove selected images
+                    if (removedImageIds != null && removedImageIds.Any())
+                    {
+                        var imagesToRemove = post.Images.Where(img => removedImageIds.Contains(img.Id)).ToList();
+                        foreach (var imageToRemove in imagesToRemove)
                         {
-                            ModelState.AddModelError("media", $"Image {file.FileName} is too large. Maximum size is 5MB.");
-                            return View("Createpost");
-                        }
-
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            await file.CopyToAsync(memoryStream);
-                            var imageData = memoryStream.ToArray();
-
-                            var postImage = new PostImage
-                            {
-                                ImageData = imageData,
-                                ContentType = file.ContentType,
-                                Post = post
-                            };
-
-                            post.Images.Add(postImage);
+                            _context.Set<PostImage>().Remove(imageToRemove);
                         }
                     }
-                    else
+                }
+                else
+                {
+                    // Create new post
+                    post = new Post
                     {
-                        ModelState.AddModelError("media", "Only image files are allowed.");
+                        Caption = caption.Trim(),
+                        Location = location.Trim(),
+                        UserId = user.Id,
+                        DatePosted = DateTime.UtcNow,
+                        Images = new List<PostImage>()
+                    };
+                    _context.Posts.Add(post);
+                }
+
+                // Add new images if any
+                if (media != null && media.Any())
+                {
+                    if (media.Count > 5)
+                    {
+                        ModelState.AddModelError("media", "You can upload up to 5 images only.");
+                        if (postId.HasValue)
+                        {
+                            return RedirectToAction("Createpost", new { id = postId.Value });
+                        }
                         return View("Createpost");
+                    }
+
+                    // Check total images after addition
+                    int existingImageCount = isEditing ? post.Images.Count() : 0;
+                    if (existingImageCount + media.Count > 5)
+                    {
+                        ModelState.AddModelError("media", $"Total images cannot exceed 5. You currently have {existingImageCount} images.");
+                        if (postId.HasValue)
+                        {
+                            return RedirectToAction("Createpost", new { id = postId.Value });
+                        }
+                        return View("Createpost");
+                    }
+
+                    foreach (var file in media)
+                    {
+                        if (file.Length > 0 && file.ContentType.StartsWith("image/"))
+                        {
+                            if (file.Length > 5 * 1024 * 1024)
+                            {
+                                ModelState.AddModelError("media", $"Image {file.FileName} is too large. Maximum size is 5MB.");
+                                if (postId.HasValue)
+                                {
+                                    return RedirectToAction("Createpost", new { id = postId.Value });
+                                }
+                                return View("Createpost");
+                            }
+
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                await file.CopyToAsync(memoryStream);
+                                var imageData = memoryStream.ToArray();
+
+                                var postImage = new PostImage
+                                {
+                                    ImageData = imageData,
+                                    ContentType = file.ContentType,
+                                    Post = post
+                                };
+
+                                post.Images.Add(postImage);
+                            }
+                        }
+                        else
+                        {
+                            ModelState.AddModelError("media", "Only image files are allowed.");
+                            if (postId.HasValue)
+                            {
+                                return RedirectToAction("Createpost", new { id = postId.Value });
+                            }
+                            return View("Createpost");
+                        }
                     }
                 }
 
-                _context.Posts.Add(post);
+                // Validate that we have at least one image
+                if (!isEditing && (post.Images == null || !post.Images.Any()))
+                {
+                    ModelState.AddModelError("media", "Please upload at least one image.");
+                    return View("Createpost");
+                }
+
+                if (isEditing && (post.Images == null || !post.Images.Any()))
+                {
+                    ModelState.AddModelError("media", "A post must have at least one image.");
+                    return RedirectToAction("Createpost", new { id = postId.Value });
+                }
+
                 await _context.SaveChangesAsync();
 
-                TempData["Message"] = "Post created successfully!";
-                return RedirectToAction("Createpost");
+                TempData["Message"] = isEditing ? "Post updated successfully!" : "Post created successfully!";
+                return RedirectToAction("Feed");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating post for user {Username}", username);
+                _logger.LogError(ex, "Error {Action} post for user {Username}", postId.HasValue ? "updating" : "creating", username);
 
-                ModelState.AddModelError("", "An error occurred while creating your post. Please try again.");
+                ModelState.AddModelError("", $"An error occurred while {(postId.HasValue ? "updating" : "creating")} your post. Please try again.");
+                if (postId.HasValue)
+                {
+                    return RedirectToAction("Createpost", new { id = postId.Value });
+                }
                 return View("Createpost");
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeletePost(int postId)
+        {
+            try
+            {
+                // Check if user is logged in
+                int? userId = HttpContext.Session.GetInt32("UserId");
+                if (userId == null)
+                {
+                    TempData["Error"] = "You must be logged in to delete a post.";
+                    return RedirectToAction("Login");
+                }
+
+                // Find the post and verify ownership
+                var post = await _context.Posts
+                    .Include(p => p.Images)
+                    .FirstOrDefaultAsync(p => p.Id == postId && p.UserId == userId.Value);
+
+                if (post == null)
+                {
+                    TempData["Error"] = "Post not found or you don't have permission to delete it.";
+                    return RedirectToAction("Feed");
+                }
+
+                // Remove all associated images first
+                if (post.Images != null && post.Images.Any())
+                {
+                    _context.Set<PostImage>().RemoveRange(post.Images);
+                }
+
+                // Remove the post
+                _context.Posts.Remove(post);
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = "Post deleted successfully!";
+                _logger.LogInformation("Post {PostId} deleted by user {UserId}", postId, userId);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "An error occurred while deleting the post. Please try again.";
+            }
+
+            return RedirectToAction("Feed");
         }
 
         public IActionResult GetPostImage(int imageId)
@@ -490,4 +647,3 @@ namespace Solivio.Controllers
         }
     }
 }
-

@@ -1,6 +1,6 @@
 ﻿using Solivio.Models;
 using System.ComponentModel.DataAnnotations;
-
+namespace Solivio.Models;
 public class PostImage
 {
     [Key]

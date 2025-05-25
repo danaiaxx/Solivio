@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "Create Post";
+    ViewData["Title"] = ViewBag.IsEditing == true ? "Edit Post" : "Create Post";
 }
 
 <div class="create-post-page">
@@ -25,17 +25,25 @@
         <form class="post-form" id="post-form" method="post" action="@Url.Action("CreatePost", "Home")" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
 
+            @if (ViewBag.IsEditing == true)
+            {
+                <input type="hidden" name="postId" value="@ViewBag.PostId" />
+            }
+
             <div class="form-group">
-                <textarea id="caption" name="caption" placeholder="Caption" class="form-input caption-input" rows="6" required></textarea>
+                <textarea id="caption" name="caption" placeholder="Caption" class="form-input caption-input" rows="6" required>@ViewBag.Caption</textarea>
             </div>
             <div class="form-group">
-                <input type="text" id="location" name="location" placeholder="Location" class="form-input" required />
+                <input type="text" id="location" name="location" placeholder="Location" class="form-input" value="@ViewBag.Location" required />
             </div>
 
             <div id="hidden-file-inputs"></div>
+            <div id="removed-image-inputs"></div>
 
             <div class="form-group">
-                <button type="submit" class="post-btn" id="post-btn" disabled>Post</button>
+                <button type="submit" class="post-btn" id="post-btn" @(ViewBag.IsEditing == true ? "" : "disabled")>
+                    @(ViewBag.IsEditing == true ? "Update Post" : "Post")
+                </button>
             </div>
         </form>
     </div>
@@ -79,15 +87,37 @@
         const postBtn = document.getElementById('post-btn');
         const postForm = document.getElementById('post-form');
         const hiddenFileInputs = document.getElementById('hidden-file-inputs');
+        const removedImageInputs = document.getElementById('removed-image-inputs');
 
         let uploadedFiles = [];
         let uploadedImages = [];
+        let existingImages = [];
+        let removedImageIds = [];
         let currentIndex = 0;
         const maxImages = 5;
+        const isEditing = @Html.Raw(ViewBag.IsEditing == true ? "true" : "false");
+
+        @if (ViewBag.IsEditing == true && ViewBag.ExistingImages != null)
+        {
+                <text>
+                existingImages = [
+                    @foreach (var image in (List<Solivio.Models.PostImage>)ViewBag.ExistingImages)
+                    {
+                            <text>
+                            {
+                                id: @image.Id,
+                                src: '@Url.Action("GetPostImage", "Home", new { imageId = image.Id })'
+                            },
+                            </text>
+                    }
+                ];
+                </text>
+        }
 
         uploadButton.addEventListener('click', function() {
-            if (uploadedImages.length >= maxImages) {
-                showModal(`You can only upload up to ${maxImages} images. Please remove some images before adding more.`);
+            const totalImages = existingImages.length + uploadedImages.length - removedImageIds.length;
+            if (totalImages >= maxImages) {
+                showModal(`You can only have up to ${maxImages} images. Please remove some images before adding more.`);
                 return;
             }
             fileInput.click();
@@ -98,20 +128,23 @@
         nextBtn.addEventListener('click', showNextImage);
 
         postForm.addEventListener('submit', function(e) {
-            if (uploadedFiles.length === 0) {
+            const totalImages = existingImages.length + uploadedFiles.length - removedImageIds.length;
+            if (totalImages === 0) {
                 e.preventDefault();
                 showModal('Please upload at least one image.');
                 return;
             }
 
             updateHiddenFileInputs();
+            updateRemovedImageInputs();
         });
 
         function handleFileSelect(e) {
             const files = Array.from(e.target.files);
 
             if (files.length > 0) {
-                const remainingSlots = maxImages - uploadedFiles.length;
+                const currentTotalImages = existingImages.length + uploadedFiles.length - removedImageIds.length;
+                const remainingSlots = maxImages - currentTotalImages;
                 const filesToProcess = Math.min(remainingSlots, files.length);
 
                 if (filesToProcess < files.length) {
@@ -157,13 +190,49 @@
             });
         }
 
-        function updateCarousel() {
-            uploadCount.textContent = `(${uploadedImages.length}/${maxImages})`;
-            postBtn.disabled = uploadedImages.length === 0;
+        function updateRemovedImageInputs() {
+            removedImageInputs.innerHTML = '';
 
-            if (uploadedImages.length > 0) {
+            removedImageIds.forEach((imageId) => {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'removedImageIds';
+                hiddenInput.value = imageId;
+                removedImageInputs.appendChild(hiddenInput);
+            });
+        }
+
+        function updateCarousel() {
+            const activeExistingImages = existingImages.filter(img => !removedImageIds.includes(img.id));
+            const totalImages = activeExistingImages.length + uploadedImages.length;
+
+            uploadCount.textContent = `(${totalImages}/${maxImages})`;
+            postBtn.disabled = totalImages === 0 && !isEditing;
+
+            if (totalImages > 0) {
                 carouselContainer.classList.add('active');
                 carouselInner.innerHTML = '';
+
+                activeExistingImages.forEach((imageData, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'carousel-item';
+
+                    const img = document.createElement('img');
+                    img.src = imageData.src;
+                    img.className = 'carousel-image';
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-image';
+                    removeBtn.innerHTML = '&times;';
+                    removeBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        removeExistingImage(imageData.id);
+                    });
+
+                    item.appendChild(img);
+                    item.appendChild(removeBtn);
+                    carouselInner.appendChild(item);
+                });
 
                 uploadedImages.forEach((src, index) => {
                     const item = document.createElement('div');
@@ -178,7 +247,7 @@
                     removeBtn.innerHTML = '&times;';
                     removeBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        removeImage(index);
+                        removeUploadedImage(index);
                     });
 
                     item.appendChild(img);
@@ -194,8 +263,10 @@
         }
 
         function showImage(index) {
-            if (uploadedImages.length === 0) return;
-            currentIndex = index;
+            const totalImages = existingImages.filter(img => !removedImageIds.includes(img.id)).length + uploadedImages.length;
+            if (totalImages === 0) return;
+
+            currentIndex = Math.max(0, Math.min(index, totalImages - 1));
             carouselInner.style.transform = `translateX(-${currentIndex * 100}%)`;
             updateNavButtons();
         }
@@ -207,24 +278,40 @@
         }
 
         function showNextImage() {
-            if (currentIndex < uploadedImages.length - 1) {
+            const totalImages = existingImages.filter(img => !removedImageIds.includes(img.id)).length + uploadedImages.length;
+            if (currentIndex < totalImages - 1) {
                 showImage(currentIndex + 1);
             }
         }
 
         function updateNavButtons() {
-            prevBtn.disabled = currentIndex === 0;
-            nextBtn.disabled = currentIndex === uploadedImages.length - 1;
+            const totalImages = existingImages.filter(img => !removedImageIds.includes(img.id)).length + uploadedImages.length;
+            prevBtn.disabled = currentIndex === 0 || totalImages <= 1;
+            nextBtn.disabled = currentIndex === totalImages - 1 || totalImages <= 1;
         }
 
-        function removeImage(index) {
+        function removeExistingImage(imageId) {
+            if (!removedImageIds.includes(imageId)) {
+                removedImageIds.push(imageId);
+            }
+            updateCarousel();
+
+            const totalImages = existingImages.filter(img => !removedImageIds.includes(img.id)).length + uploadedImages.length;
+            if (currentIndex >= totalImages && totalImages > 0) {
+                currentIndex = totalImages - 1;
+                showImage(currentIndex);
+            }
+        }
+
+        function removeUploadedImage(index) {
             uploadedFiles.splice(index, 1);
             uploadedImages.splice(index, 1);
 
             updateCarousel();
 
-            if (currentIndex >= uploadedImages.length) {
-                currentIndex = Math.max(0, uploadedImages.length - 1);
+            const totalImages = existingImages.filter(img => !removedImageIds.includes(img.id)).length + uploadedImages.length;
+            if (currentIndex >= totalImages && totalImages > 0) {
+                currentIndex = Math.max(0, totalImages - 1);
                 showImage(currentIndex);
             }
         }
@@ -232,17 +319,24 @@
         function resetForm() {
             uploadedFiles = [];
             uploadedImages = [];
+            removedImageIds = [];
             currentIndex = 0;
             postForm.reset();
             updateCarousel();
         }
 
-        @if (TempData["Message"] != null)
+        // Initialize carousel with existing images if editing
+        if (isEditing) {
+            updateCarousel();
+        }
+
+        @if (TempData["ShowModal"] is bool showModal && showModal && TempData["Message"] != null)
         {
                 <text>
                 showModal('@TempData["Message"]');
                 </text>
         }
+
     });
 </script>
 
@@ -315,7 +409,7 @@
     }
 
     .upload-text {
-        font-size: 16px;
+        font-size: 14px;
         color: #2F4F4F;
         margin: 0;
     }
@@ -415,7 +509,7 @@
     .form-input {
         width: 100%;
         padding: 10px 12px;
-        border: 1px solid #dbdbdb;
+        border: 1px solid #ddd;
         border-radius: 4px;
         font-size: 14px;
         box-sizing: border-box;
@@ -444,7 +538,7 @@
     }
 
         .post-btn:hover:not(:disabled) {
-            background-color: #1e3030;
+            background-color: #3d6666;
         }
 
         .post-btn:disabled {
